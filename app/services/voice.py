@@ -200,6 +200,38 @@ def is_mimo_voice(voice_name: str):
     return voice_name.startswith("mimo:")
 
 
+def is_local_voice(voice_name: str | None) -> bool:
+    """检查是否是本地 macOS say API 声音"""
+    return str(voice_name or "").startswith("local:")
+
+
+def get_local_voices() -> list[str]:
+    """获取 macOS 本地 say 命令с поддержкой голосов"""
+    import platform
+    if platform.system() != "Darwin":
+        return []
+    
+    voices = []
+    try:
+        result = subprocess.run(["say", "-v", "?"], capture_output=True, text=True, check=False)
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                line = line.strip()
+                if not line or line.startswith("WARNING:"):
+                    continue
+                match = re.match(r"^([^\t#]+?)\s+([a-z]{2}_[A-Z0-9_]{2,5})\s+#", line)
+                if match:
+                    voice_name = match.group(1).strip()
+                    lang = match.group(2).strip()
+                    voices.append(f"local:{voice_name}-{lang}")
+        if not voices:
+            voices = ["local:Milena-ru_RU", "local:Samantha-en_US", "local:Yuri-ru_RU", "local:Daniel-en_GB"]
+    except Exception as e:
+        logger.error(f"failed to get local voices: {str(e)}")
+        voices = ["local:Milena-ru_RU", "local:Samantha-en_US", "local:Yuri-ru_RU", "local:Daniel-en_GB"]
+    return voices
+
+
 def is_no_voice(voice_name: str | None) -> bool:
     """
     判断用户是否明确选择了“无配音”模式。
@@ -359,6 +391,15 @@ def tts(
             return mimo_tts(text, voice, voice_rate, voice_file, voice_volume)
         else:
             logger.error(f"Invalid mimo voice name format: {voice_name}")
+            return None
+    elif is_local_voice(voice_name):
+        parts = voice_name.split(":")
+        if len(parts) >= 2:
+            voice_with_lang = parts[1]
+            actual_voice = voice_with_lang.split("-")[0]
+            return local_tts(text, actual_voice, voice_rate, voice_file)
+        else:
+            logger.error(f"Invalid local voice name format: {voice_name}")
             return None
     return azure_tts_v1(text, voice_name, voice_rate, voice_file)
 
@@ -1139,6 +1180,75 @@ def mimo_tts(
         except Exception as e:
             logger.error(f"mimo tts failed: {str(e)}")
 
+    return None
+
+
+def local_tts(
+    text: str,
+    voice_name: str,
+    voice_rate: float,
+    voice_file: str,
+) -> Union[SubMaker, None]:
+    """
+    使用 macOS 本地 say 命令生成语音。
+    """
+    text = text.strip()
+    ensure_file_path_exists(voice_file)
+    
+    wpm = int(185 * voice_rate)
+    temp_aiff = voice_file + ".aiff"
+    
+    for i in range(3):
+        try:
+            logger.info(f"start local macOS tts, voice name: {voice_name}, rate: {wpm} wpm, try: {i + 1}")
+            
+            cmd = ["say", "-v", voice_name, "-r", str(wpm), "-o", temp_aiff, text]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            if result.returncode != 0:
+                logger.error(f"say command failed: {result.stderr}")
+                continue
+                
+            if not os.path.exists(temp_aiff) or os.path.getsize(temp_aiff) <= 0:
+                logger.error("local tts aiff file is missing or empty")
+                continue
+                
+            ffmpeg_binary = utils.get_ffmpeg_binary()
+            conv_cmd = [ffmpeg_binary, "-y", "-i", temp_aiff, "-codec:a", "libmp3lame", "-q:a", "4", voice_file]
+            conv_result = subprocess.run(conv_cmd, capture_output=True, text=True, check=False)
+            
+            if os.path.exists(temp_aiff):
+                os.remove(temp_aiff)
+                
+            if conv_result.returncode != 0:
+                logger.error(f"ffmpeg conversion failed: {conv_result.stderr}")
+                continue
+                
+            if not os.path.exists(voice_file) or os.path.getsize(voice_file) <= 0:
+                logger.error("local tts output mp3 file is missing or empty")
+                continue
+                
+            sub_maker = ensure_legacy_submaker_fields(SubMaker())
+            audio_duration = _get_audio_duration_from_mp3(voice_file)
+            
+            logger.success(f"local tts succeeded: {voice_file}")
+            return populate_legacy_submaker_with_full_text(
+                sub_maker=sub_maker,
+                text=text,
+                audio_duration_seconds=audio_duration
+            )
+        except Exception as e:
+            logger.error(f"local tts failed: {str(e)}")
+            if os.path.exists(temp_aiff):
+                try:
+                    os.remove(temp_aiff)
+                except Exception:
+                    pass
+            if os.path.exists(voice_file) and os.path.getsize(voice_file) == 0:
+                try:
+                    os.remove(voice_file)
+                except Exception:
+                    pass
+                    
     return None
 
 

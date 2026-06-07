@@ -942,6 +942,7 @@ with middle_panel:
         # 添加TTS服务器选择下拉框
         tts_servers = [
             (voice.NO_VOICE_NAME, tr("No Voice")),
+            ("local-tts", "Local macOS TTS (say)"),
             ("azure-tts-v1", "Azure TTS V1"),
             ("azure-tts-v2", "Azure TTS V2"),
             ("siliconflow", "SiliconFlow TTS"),
@@ -949,7 +950,7 @@ with middle_panel:
             ("mimo-tts", "Xiaomi MiMo TTS"),
         ]
 
-        # 获取保存的TTS服务器，默认为v1
+        # 获取保存 de TTS 服务器，默认为v1
         saved_tts_server = config.ui.get("tts_server", "azure-tts-v1")
         saved_tts_server_index = 0
         for i, (server_value, _) in enumerate(tts_servers):
@@ -974,6 +975,8 @@ with middle_panel:
             # 无配音是显式模式，只提供一个稳定 sentinel。这样普通 TTS 的空配置
             # 不会被误判为静音，后端也能继续通过同一条音频/字幕流程生成视频。
             filtered_voices = [voice.NO_VOICE_NAME]
+        elif selected_tts_server == "local-tts":
+            filtered_voices = voice.get_local_voices()
         elif selected_tts_server == "siliconflow":
             # 获取硅基流动的声音列表
             filtered_voices = voice.get_siliconflow_voices()
