@@ -810,6 +810,7 @@ with middle_panel:
             (tr("Pexels"), "pexels"),
             (tr("Pixabay"), "pixabay"),
             (tr("Coverr"), "coverr"),
+            (tr("Stable Diffusion (Local AI)"), "stable-diffusion"),
             (tr("Local file"), "local"),
             (tr("TikTok"), "douyin"),
             (tr("Bilibili"), "bilibili"),
@@ -817,7 +818,11 @@ with middle_panel:
         ]
 
         saved_video_source_name = config.app.get("video_source", "pexels")
-        saved_video_source_index = [v[1] for v in video_sources].index(
+        # Ensure saved source is in list, fallback to pexels if not found
+        source_values = [v[1] for v in video_sources]
+        if saved_video_source_name not in source_values:
+            saved_video_source_name = "pexels"
+        saved_video_source_index = source_values.index(
             saved_video_source_name
         )
 

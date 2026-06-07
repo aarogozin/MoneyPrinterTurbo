@@ -8,7 +8,7 @@ from loguru import logger
 from app.config import config
 from app.models import const
 from app.models.schema import VideoConcatMode, VideoParams
-from app.services import llm, material, subtitle, video, voice, upload_post
+from app.services import llm, material, subtitle, video, voice, upload_post, sd
 from app.services import state as sm
 from app.utils import file_security, utils
 
@@ -228,6 +228,20 @@ def get_video_materials(task_id, params, video_terms, audio_duration):
             )
             return None
         return [material_info.url for material_info in materials]
+    elif params.video_source == "stable-diffusion":
+        logger.info("\n\n## generating local stable diffusion materials")
+        subtitle_path = path.join(utils.task_dir(task_id), "subtitle.srt")
+        materials = sd.generate_videos_from_subtitles(
+            task_id=task_id,
+            subtitle_path=subtitle_path,
+            video_aspect=params.video_aspect,
+            max_clip_duration=params.video_clip_duration
+        )
+        if not materials:
+            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+            logger.error("failed to generate stable diffusion videos.")
+            return None
+        return materials
     else:
         logger.info(f"\n\n## downloading videos from {params.video_source}")
         # 顺序匹配模式只在用户显式开启时生效。这里强制素材下载按关键词顺序
