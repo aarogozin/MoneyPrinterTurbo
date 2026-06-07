@@ -252,6 +252,12 @@ def _generate_response(prompt: str) -> str:
                     base_url = "https://api.xiaomimimo.com/v1"
                 if not model_name:
                     model_name = "mimo-v2.5-pro"
+            elif llm_provider == "omlx":
+                api_key = config.app.get("omlx_api_key")
+                model_name = config.app.get("omlx_model_name")
+                base_url = config.app.get("omlx_base_url", "")
+                if not base_url:
+                    base_url = "http://127.0.0.1:8000/v1"
             elif llm_provider == "deepseek":
                 api_key = config.app.get("deepseek_api_key")
                 model_name = config.app.get("deepseek_model_name")

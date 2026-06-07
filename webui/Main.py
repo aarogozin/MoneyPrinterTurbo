@@ -287,6 +287,7 @@ if not config.app.get("hide_config", False):
                 aihubmix_label = "AIHubMix（推荐）"
             llm_provider_options = [
                 ("OpenAI", "openai"),
+                ("oMLX (Local AI)", "omlx"),
                 (aihubmix_label, "aihubmix"),
                 ("AIML API", "aimlapi"),
                 ("Moonshot", "moonshot"),
@@ -552,6 +553,20 @@ if not config.app.get("hide_config", False):
                             - **API Key**: Optional - Leave empty for public access
                             - **Base Url**: Default is https://text.pollinations.ai/openai
                             - **Model Name**: Use 'openai-fast' or specify a model name
+                            """
+
+            if llm_provider == "omlx":
+                if not llm_model_name:
+                    llm_model_name = "default"
+                if not llm_base_url:
+                    llm_base_url = "http://127.0.0.1:8000/v1"
+                with llm_helper:
+                    tips = """
+                            ##### oMLX Configuration
+                            > [oMLX](https://omlx.ai) runs local LLMs on Apple Silicon (M1/M2/M3/M4) leveraging Apple MLX.
+                            - **API Key**: Enter the API key generated in the oMLX dashboard.
+                            - **Base Url**: Defaults to `http://127.0.0.1:8000/v1`
+                            - **Model Name**: The name of the model currently loaded in oMLX.
                             """
 
             if llm_provider == "litellm":
