@@ -33,17 +33,17 @@ else
   echo "AUTOMATIC1111 repository already cloned."
 fi
 
-# 5. Download Stable Diffusion 1.5 Model (if it doesn't exist)
-MODEL_PATH="$SD_DIR/models/Stable-diffusion/v1-5-pruned-emaonly.safetensors"
+# 5. Download Stable Diffusion Model - DreamShaper 8 (if it doesn't exist)
+MODEL_PATH="$SD_DIR/models/Stable-diffusion/DreamShaper_8_pruned.safetensors"
 if [ ! -f "$MODEL_PATH" ]; then
-  echo "Downloading Stable Diffusion 1.5 model (approx. 4GB)..."
+  echo "Downloading DreamShaper 8 (Pixar/Illustration style) model (approx. 2GB)..."
   mkdir -p "$(dirname "$MODEL_PATH")"
   
-  # Download from runwayml
-  curl -L -o "$MODEL_PATH" "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.safetensors"
+  # Download DreamShaper 8
+  curl -L -o "$MODEL_PATH" "https://huggingface.co/Lykon/DreamShaper/resolve/main/DreamShaper_8_pruned.safetensors"
   echo "Model downloaded successfully."
 else
-  echo "Stable Diffusion 1.5 model already exists."
+  echo "DreamShaper 8 model already exists."
 fi
 
 # 6. Create local startup runner with --api enabled
